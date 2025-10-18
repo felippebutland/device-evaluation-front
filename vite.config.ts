@@ -12,9 +12,11 @@ export default defineConfig({
   },
   server: {
     port: 3001,
-    open: true
-  }
-  ,
+    open: true,
+    allowedHosts: [
+      'device-evaluation.domusduo.space'
+    ]
+  },
   preview: {
     // allow the preview server to accept requests for this host (needed when previewing behind a proxy or specific hostname)
     allowedHosts: [
