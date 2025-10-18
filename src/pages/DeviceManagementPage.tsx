@@ -41,7 +41,7 @@ interface Device {
     applicableDamageTypes: ApplicableDamageType[];
 }
 
-const API_BASE_URL = 'http://localhost:3737/api/v1';
+const API_BASE_URL = 'https://api-device-evaluation.domusduo.space/api/v1';
 
 export function DeviceManagementPage() {
     const [devices, setDevices] = useState<Device[]>([]);
