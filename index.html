@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Avaliação e Gestão de Dispositivos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header__content">
+                <div class="header__logo">
+                    <h1>DeviceHub</h1>
+                </div>
+                <nav class="header__nav" id="mainNav">
+                    <!-- Navigation will be populated by JavaScript -->
+                </nav>
+                <div class="header__actions" id="headerActions">
+                    <!-- Auth buttons will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="root" class="main-content">
+        <!-- Content will be dynamically loaded here -->
+    </main>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="loading-spinner"></div>
+        <p>Carregando...</p>
+    </div>
+
+    <!-- Modal Container -->
+    <div id="modalContainer" class="modal-container hidden">
+        <div class="modal-backdrop"></div>
+        <div class="modal" id="modal">
+            <div class="modal__header">
+                <h3 id="modalTitle"></h3>
+                <button class="modal__close" id="modalClose">&times;</button>
+            </div>
+            <div class="modal__body" id="modalBody">
+                <!-- Modal content -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- Templates -->
+    <template id="deviceCardTemplate">
+        <div class="card device-card">
+            <div class="card__body">
+                <div class="device-card__header">
+                    <h3 class="device-card__name"></h3>
+                    <span class="device-card__price"></span>
+                </div>
+                <div class="device-card__details">
+                    <p class="device-card__brand"></p>
+                    <p class="device-card__model"></p>
+                </div>
+                <div class="device-card__actions">
+                    <button class="btn btn--primary btn--sm view-details">Ver Detalhes</button>
+                    <button class="btn btn--outline btn--sm submit-device">Submeter</button>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="submissionCardTemplate">
+        <div class="card submission-card">
+            <div class="card__body">
+                <div class="submission-card__header">
+                    <h4 class="submission-card__device"></h4>
+                    <span class="status submission-card__status"></span>
+                </div>
+                <div class="submission-card__details">
+                    <p class="submission-card__tracking"></p>
+                    <p class="submission-card__date"></p>
+                    <p class="submission-card__condition"></p>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <template id="loginFormTemplate">
+        <form class="form login-form">
+            <div class="form-group">
+                <label class="form-label" for="loginEmail">Email</label>
+                <input type="email" id="loginEmail" name="email" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="loginPassword">Senha</label>
+                <input type="password" id="loginPassword" name="password" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn--primary btn--full-width">Entrar</button>
+            </div>
+            <div class="form-group">
+                <p>Não tem conta? <a href="#" id="showRegisterForm">Cadastrar-se</a></p>
+            </div>
+        </form>
+    </template>
+
+    <template id="registerFormTemplate">
+        <form class="form register-form">
+            <div class="form-group">
+                <label class="form-label" for="registerName">Nome Completo</label>
+                <input type="text" id="registerName" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="registerEmail">Email</label>
+                <input type="email" id="registerEmail" name="email" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="registerPassword">Senha</label>
+                <input type="password" id="registerPassword" name="password" class="form-control" minlength="6" required>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn--primary btn--full-width">Cadastrar</button>
+            </div>
+            <div class="form-group">
+                <p>Já tem conta? <a href="#" id="showLoginForm">Fazer login</a></p>
+            </div>
+        </form>
+    </template>
+
+<!--    <template id="deviceSubmissionFormTemplate">-->
+<!--        <form class="form device-submission-form">-->
+<!--            <div class="form-group">-->
+<!--                <label class="form-label" for="deviceSelect">Dispositivo</label>-->
+<!--                <select id="deviceSelect" name="deviceId" class="form-control" required>-->
+<!--                    <option value="">Selecione um dispositivo</option>-->
+<!--                </select>-->
+<!--            </div>-->
+<!--            <div class="form-group anonymous-fields">-->
+<!--                <label class="form-label" for="contactName">Nome do Contato</label>-->
+<!--                <input type="text" id="contactName" name="contactName" class="form-control">-->
+<!--            </div>-->
+<!--            <div class="form-group anonymous-fields">-->
+<!--                <label class="form-label" for="contactEmail">Email de Contato</label>-->
+<!--                <input type="email" id="contactEmail" name="contactEmail" class="form-control">-->
+<!--            </div>-->
+<!--            <div class="form-group anonymous-fields">-->
+<!--                <label class="form-label" for="contactPhone">Telefone</label>-->
+<!--                <input type="tel" id="contactPhone" name="contactPhone" class="form-control">-->
+<!--            </div>-->
+<!--            <div class="form-group">-->
+<!--                <label class="form-label" for="serialNumber">Número de Série</label>-->
+<!--                <input type="text" id="serialNumber" name="deviceSerialNumber" class="form-control" required>-->
+<!--            </div>-->
+<!--            <div class="form-group">-->
+<!--                <label class="form-label" for="condition">Condição Relatada</label>-->
+<!--                <select id="condition" name="reportedCondition" class="form-control" required>-->
+<!--                    <option value="excellent">Excelente</option>-->
+<!--                    <option value="good">Boa</option>-->
+<!--                    <option value="fair">Regular</option>-->
+<!--                    <option value="poor">Ruim</option>-->
+<!--                    <option value="damaged">Danificado</option>-->
+<!--                </select>-->
+<!--            </div>-->
+<!--            <div class="form-group">-->
+<!--                <label class="form-label" for="saleMode">Modalidade Preferida</label>-->
+<!--                <select id="saleMode" name="preferredSaleMode" class="form-control" required>-->
+<!--                    <option value="sale">Venda</option>-->
+<!--                    <option value="trade">Troca</option>-->
+<!--                </select>-->
+<!--            </div>-->
+<!--            <div class="form-group">-->
+<!--                <label class="form-label" for="userNotes">Observações (Opcional)</label>-->
+<!--                <textarea id="userNotes" name="userNotes" class="form-control" rows="3"></textarea>-->
+<!--            </div>-->
+<!--            <div class="form-group">-->
+<!--                <button type="submit" class="btn btn&#45;&#45;primary btn&#45;&#45;full-width">Submeter Dispositivo</button>-->
+<!--            </div>-->
+<!--        </form>-->
+<!--    </template>-->
+
+    <script type="module" src="/main.tsx"></script>
+</body>
+</html>
