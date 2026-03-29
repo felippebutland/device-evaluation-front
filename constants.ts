@@ -1,4 +1,4 @@
-export const API_BASE_URL = 'https://api-device-evaluation.domusduo.space/api/v1'
+export const API_BASE_URL = 'http://localhost:3737/api/v1'
 
 export const STORAGE_KEYS = {
   TOKEN: 'devicehub_token',

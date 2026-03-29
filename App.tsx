@@ -28,7 +28,6 @@ import { AdminRoute } from '@/components/AdminRoute';
 
 import './globals.css';
 import './style.css';
-import {Header} from "./src/components/layout/Header";
 import {Footer} from "./src/components/layout/Footer";
 import {ProtectedRoute} from "./src/components/ProtectedRoute";
 
@@ -38,7 +37,6 @@ function App() {
       <ToastProvider>
         <Router>
           <div className="min-h-screen flex flex-col bg-white">
-            <Header />
 
             <main className="flex-1 bg-white">
               <Routes>

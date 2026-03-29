@@ -112,6 +112,17 @@ export const deviceSchema = z.object({
   active: z.boolean().default(true)
 });
 
+export const conservationStateSchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Nome é obrigatório'),
+  description: z.string().optional(),
+  operation: z.enum(['add', 'subtract'], {
+    required_error: 'Operação é obrigatória'
+  }).default('subtract'),
+  active: z.boolean().default(true)
+});
+
 export const damageTypeSchema = z.object({
   deviceId: z
     .string()
@@ -128,6 +139,9 @@ export const damageTypeSchema = z.object({
   discountValue: z
     .number()
     .min(0.01, 'Valor do desconto deve ser maior que zero'),
+  operation: z.enum(['add', 'subtract'], {
+    required_error: 'Operação é obrigatória'
+  }).default('subtract'),
   active: z.boolean().default(true)
 });
 
@@ -163,6 +177,7 @@ export const evaluationSchema = z.object({
   })
 });
 
+export type ConservationStateForm = z.infer<typeof conservationStateSchema>;
 export type LoginForm = z.infer<typeof loginSchema>;
 export type RegisterForm = z.infer<typeof registerSchema>;
 export type AnonymousSubmissionForm = z.infer<typeof anonymousSubmissionSchema>;

@@ -27,6 +27,17 @@ export interface Device {
       name: string;
     };
     defaultDiscountPercentage: number;
+    operation: 'add' | 'subtract';
+    blocksSubmission: boolean;
+  }>;
+  applicableConservationStates?: Array<{
+    id: string;
+    conservationState: {
+      id: string;
+      name: string;
+    };
+    value: number;
+    operation: 'add' | 'subtract';
   }>;
 }
 
@@ -37,6 +48,15 @@ export interface DamageType {
   description: string;
   discountType: 'percentage' | 'fixed';
   discountValue: number;
+  operation: 'add' | 'subtract';
+  active: boolean;
+}
+
+export interface ConservationState {
+  id: string;
+  name: string;
+  description?: string;
+  operation: 'add' | 'subtract';
   active: boolean;
 }
 

@@ -47,11 +47,7 @@ export function RegisterPage() {
         {/* Left Side - Form */}
         <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
           <div className="max-w-md w-full space-y-8">
-            {/* Header */}
             <div className="text-center">
-              <Link to="/" className="text-2xl font-bold text-gray-900 hover:text-gray-700 transition-colors">
-                DeviceHub
-              </Link>
               <p className="mt-2 text-gray-600">
                 Crie sua conta gratuita e comece a vender
               </p>
