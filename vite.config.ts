@@ -14,15 +14,15 @@ export default defineConfig({
         port: 3001,
         open: true,
         allowedHosts: [
-            'device-evaluation.domusduo.space',
-            'localhost:3737'
+            'interno.usestarshield.com',
+            'localhost:3001'
         ]
     },
     preview: {
         // allow the preview server to accept requests for this host (needed when previewing behind a proxy or specific hostname)
         allowedHosts: [
-            'device-evaluation.domusduo.space',
-            'localhost:3737'
+            'interno.usestarshield.com',
+            'localhost:3001'
 
         ]
     }

@@ -57,7 +57,7 @@ interface Device {
     applicableConservationStates: ApplicableConservationState[];
 }
 
-const API_BASE_URL = 'http://localhost:3737/api/v1';
+const API_BASE_URL = 'https://api-device.usestarshield.com/api/v1';
 
 function resolveDamageTypeRefId(dt: any, damageTypeCatalog: DamageType[]): string | undefined {
     if (!dt) return undefined;
