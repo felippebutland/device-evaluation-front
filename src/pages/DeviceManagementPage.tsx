@@ -135,6 +135,9 @@ export function DeviceManagementPage() {
     const [isConservationStateModalOpen, setIsConservationStateModalOpen] = useState(false);
     const [editingDevice, setEditingDevice] = useState<Device | null>(null);
     const [loading, setLoading] = useState(false);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalDevices, setTotalDevices] = useState(0);
 
     const emptyDevice: Device = {
         name: '',
@@ -172,17 +175,22 @@ export function DeviceManagementPage() {
 
     // Carregar dados iniciais
     useEffect(() => {
-        fetchDevices();
         fetchDamageTypes();
         fetchPricingPolicies();
         fetchConservationStates();
     }, []);
 
-    const fetchDevices = async () => {
+    useEffect(() => {
+        fetchDevices(currentPage);
+    }, [currentPage]);
+
+    const fetchDevices = async (page = 1) => {
         try {
-            const response = await fetch(`${API_BASE_URL}/devices/public`);
+            const response = await fetch(`${API_BASE_URL}/devices/public?page=${page}&limit=10`);
             const data = await response.json();
             setDevices(data.data);
+            setTotalPages(data.totalPages ?? 1);
+            setTotalDevices(data.total ?? 0);
         } catch (error) {
             console.error('Erro ao carregar dispositivos:', error);
         }
@@ -394,7 +402,7 @@ export function DeviceManagementPage() {
             });
 
             if (response.ok) {
-                await fetchDevices();
+                await fetchDevices(currentPage);
                 handleCloseModal();
             }
         } catch (error) {
@@ -479,7 +487,10 @@ export function DeviceManagementPage() {
             await fetch(`${API_BASE_URL}/devices/${deviceId}`, {
                 method: 'DELETE',
             });
-            await fetchDevices();
+            // Se era o último item da página, voltar para a anterior
+            const newPage = devices.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+            setCurrentPage(newPage);
+            if (newPage === currentPage) await fetchDevices(currentPage);
         } catch (error) {
             console.error('Erro ao excluir dispositivo:', error);
         }
@@ -790,6 +801,55 @@ export function DeviceManagementPage() {
                         ))
                     )}
                 </div>
+
+                {/* Paginação */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-6 px-1">
+                        <p className="text-sm text-gray-600">
+                            Mostrando página <span className="font-medium">{currentPage}</span> de <span className="font-medium">{totalPages}</span> ({totalDevices} dispositivos)
+                        </p>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                            >
+                                <span>Anterior</span>
+                            </Button>
+                            {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
+                                .reduce<(number | '...')[]>((acc, p, idx, arr) => {
+                                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
+                                    acc.push(p);
+                                    return acc;
+                                }, [])
+                                .map((p, idx) =>
+                                    p === '...' ? (
+                                        <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">…</span>
+                                    ) : (
+                                        <Button
+                                            key={p}
+                                            variant={p === currentPage ? 'default' : 'outline'}
+                                            size="sm"
+                                            onClick={() => setCurrentPage(p as number)}
+                                            className="w-9"
+                                        >
+                                            <span>{p}</span>
+                                        </Button>
+                                    )
+                                )}
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                            >
+                                <span>Próximo</span>
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Modal de Estado de Conservação */}
                 {isConservationStateModalOpen && (
