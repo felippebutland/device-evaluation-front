@@ -70,8 +70,7 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
     // Mapeamento de payment timing para labels
     const paymentTimingOptions = [
         { value: 'seven_days', label: '7 dias' },
-        { value: 'ten_days', label: '10 dias' },
-        { value: 'fifteen_days', label: '15 dias' },
+        { value: 'ten_days', label: '15 dias' },
         { value: 'thirty_days', label: '30 dias' }
     ];
 
@@ -154,6 +153,23 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
         }) || null;
     }, [selectedDevice, selectedDamageIds]);
 
+    // Filtrar modalidades disponíveis com base nas políticas do dispositivo
+    const availableSaleModes = useMemo(() => {
+        if (!selectedDevice || !(selectedDevice as any).specificPricingPolicies) return SALE_MODES;
+        const policies = (selectedDevice as any).specificPricingPolicies;
+        const hasSale = policies.some((p: any) => {
+            const mode = p.saleMode || p.pricingPolicy?.saleMode || '';
+            const active = p.isActive ?? p.pricingPolicy?.isActive ?? true;
+            return mode === 'sale' && active;
+        });
+        const hasExchange = policies.some((p: any) => {
+            const mode = p.saleMode || p.pricingPolicy?.saleMode || '';
+            const active = p.isActive ?? p.pricingPolicy?.isActive ?? true;
+            return mode === 'exchange' && active;
+        });
+        return SALE_MODES.filter((m) => (m.value === 'sale' && hasSale) || (m.value === 'exchange' && hasExchange));
+    }, [selectedDevice]);
+
     // Filtrar políticas ativas e de venda
     const activeSalePolicies = useMemo(() => {
         if (!pricingPoliciesData) return [];
@@ -176,6 +192,13 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
         form.setValue('paymentTiming', '');
     }, [preferredSaleMode]);
 
+    // Reset para a primeira modalidade disponível se a atual não é suportada pelo dispositivo
+    useEffect(() => {
+        if (availableSaleModes.length > 0 && !availableSaleModes.find((m) => m.value === preferredSaleMode)) {
+            form.setValue('preferredSaleMode', availableSaleModes[0].value);
+        }
+    }, [availableSaleModes]);
+
     // Função para determinar política de bateria baseada na porcentagem
     const getBatteryPolicy = useMemo(() => {
         if (!selectedDevice || !selectedDevice.applicableDamageTypes || selectedDevice.applicableDamageTypes.length === 0) {
@@ -186,7 +209,7 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
 
         const batteryDamageTypes = selectedDevice.applicableDamageTypes.filter((adt: any) => {
             const name = adt.damageType?.name?.toLowerCase() || '';
-            return name.includes('bateria') || name.includes('battery');
+            return (name.includes('bateria') || name.includes('battery')) && name.includes('%');
         });
 
         if (batteryDamageTypes.length === 0) {
@@ -351,7 +374,7 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
     // Handle device selection
     const handleDeviceSelect = (deviceId: string) => {
         const devicesList = Array.isArray(devicesData) ? devicesData : (devicesData as any)?.data ?? [];
-        const device = devicesList.find((d: any) => String(d.id) === String(deviceId)) || null;
+        const device = devicesList.find((d: any) => String(d._id || d.id) === String(deviceId)) || null;
         setSelectedDevice(device);
         setSelectedVariant(null);
     };
@@ -650,17 +673,21 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
                                 </div>
                                 <label style={labelStyle}>Dispositivo</label>
                                 {(() => {
-                                    const devicesList = Array.isArray(devicesData) ? devicesData : (devicesData as any)?.data ?? [];
+                                    const devicesList = [...(Array.isArray(devicesData) ? devicesData : (devicesData as any)?.data ?? [])].sort((a: any, b: any) => {
+                                        const numA = parseInt((a.name || a.model || '').match(/\d+/)?.[0] || '0', 10);
+                                        const numB = parseInt((b.name || b.model || '').match(/\d+/)?.[0] || '0', 10);
+                                        return numB - numA;
+                                    });
                                     return (
                                         <select
                                             style={selectStyle}
-                                            value={selectedDevice ? String(selectedDevice.id) : ''}
+                                            value={selectedDevice ? String(selectedDevice._id || selectedDevice.id) : ''}
                                             onChange={(e) => handleDeviceSelect(e.target.value)}
                                             disabled={devicesLoading || !!devicesError}
                                         >
                                             <option value="">{devicesLoading ? 'Carregando...' : 'Selecione um dispositivo'}</option>
                                             {devicesList.map((d: any) => (
-                                                <option key={d.id} value={String(d.id)}>{d.brand} • {d.name}</option>
+                                                <option key={d._id || d.id} value={String(d._id || d.id)}>{d.brand} • {d.name}</option>
                                             ))}
                                         </select>
                                     );
@@ -774,7 +801,7 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
                                     <div>
                                         <label style={labelStyle}>Modalidade Preferida</label>
                                         <select {...form.register('preferredSaleMode')} style={selectStyle}>
-                                            {SALE_MODES.map((mode) => (
+                                            {availableSaleModes.map((mode) => (
                                                 <option key={mode.value} value={mode.value}>{mode.label} — {mode.description}</option>
                                             ))}
                                         </select>
@@ -798,7 +825,7 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
                             {/* Step 6: Defeitos */}
                             {selectedDevice && selectedVariant && selectedDevice.applicableDamageTypes && selectedDevice.applicableDamageTypes.filter((adt: any) => {
                                 const n = adt.damageType?.name?.toLowerCase() || '';
-                                return !n.includes('bateria') && !n.includes('battery');
+                                return !((n.includes('bateria') || n.includes('battery')) && n.includes('%'));
                             }).length > 0 && (
                                 <div style={{ borderTop: `1px solid ${t.divider}`, paddingTop: '16px', marginTop: '16px' }}>
                                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '4px' }}>
@@ -807,7 +834,7 @@ export function SubmissionForm({ device, onSuccess, onCancel }: SubmissionFormPr
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '10px' }}>
                                         {selectedDevice.applicableDamageTypes
-                                            .filter((adt: any) => { const n = adt.damageType?.name?.toLowerCase() || ''; return !n.includes('bateria') && !n.includes('battery'); })
+                                            .filter((adt: any) => { const n = adt.damageType?.name?.toLowerCase() || ''; return !((n.includes('bateria') || n.includes('battery')) && n.includes('%')); })
                                             .map((adt: any) => {
                                                 const adtId = adt.id || adt._id;
                                                 const isSelected = selectedDamageIds.includes(adtId);
