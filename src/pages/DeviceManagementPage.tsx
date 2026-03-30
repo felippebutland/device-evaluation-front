@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Package, Plus, Edit2, Trash2, X, Save, DollarSign, AlertTriangle } from 'lucide-react';
+import { Package, Plus, Edit2, Trash2, X, Save, DollarSign, AlertTriangle, Search } from 'lucide-react';
 
 interface DamageType {
     id: string;
@@ -138,6 +138,7 @@ export function DeviceManagementPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalDevices, setTotalDevices] = useState(0);
+    const [search, setSearch] = useState('');
 
     const emptyDevice: Device = {
         name: '',
@@ -181,12 +182,19 @@ export function DeviceManagementPage() {
     }, []);
 
     useEffect(() => {
-        fetchDevices(currentPage);
+        fetchDevices(currentPage, search);
     }, [currentPage]);
 
-    const fetchDevices = async (page = 1) => {
+    useEffect(() => {
+        setCurrentPage(1);
+        fetchDevices(1, search);
+    }, [search]);
+
+    const fetchDevices = async (page = 1, searchTerm = '') => {
         try {
-            const response = await fetch(`${API_BASE_URL}/devices/public?page=${page}&limit=10`);
+            const params = new URLSearchParams({ page: String(page), limit: '10' });
+            if (searchTerm.trim()) params.set('search', searchTerm.trim());
+            const response = await fetch(`${API_BASE_URL}/devices/public?${params}`);
             const data = await response.json();
             setDevices(data.data);
             setTotalPages(data.totalPages ?? 1);
@@ -402,7 +410,7 @@ export function DeviceManagementPage() {
             });
 
             if (response.ok) {
-                await fetchDevices(currentPage);
+                await fetchDevices(currentPage, search);
                 handleCloseModal();
             }
         } catch (error) {
@@ -490,7 +498,7 @@ export function DeviceManagementPage() {
             // Se era o último item da página, voltar para a anterior
             const newPage = devices.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
             setCurrentPage(newPage);
-            if (newPage === currentPage) await fetchDevices(currentPage);
+            if (newPage === currentPage) await fetchDevices(currentPage, search);
         } catch (error) {
             console.error('Erro ao excluir dispositivo:', error);
         }
@@ -711,6 +719,26 @@ export function DeviceManagementPage() {
                     </div>
                 </div>
 
+                {/* Filtro por modelo */}
+                <div className="relative mb-4">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    <input
+                        type="text"
+                        placeholder="Filtrar por modelo..."
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white shadow-sm"
+                    />
+                    {search && (
+                        <button
+                            onClick={() => setSearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                        >
+                            <X className="h-4 w-4" />
+                        </button>
+                    )}
+                </div>
+
                 {/* Lista de dispositivos */}
                 <div className="grid gap-4">
                     {devices.length === 0 ? (
@@ -814,6 +842,7 @@ export function DeviceManagementPage() {
                                 size="sm"
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
+                                className="border-gray-400 text-gray-700 hover:bg-gray-100 disabled:opacity-40"
                             >
                                 <span>Anterior</span>
                             </Button>
@@ -826,14 +855,14 @@ export function DeviceManagementPage() {
                                 }, [])
                                 .map((p, idx) =>
                                     p === '...' ? (
-                                        <span key={`ellipsis-${idx}`} className="px-1 text-gray-400">…</span>
+                                        <span key={`ellipsis-${idx}`} className="px-1 text-gray-500 font-medium">…</span>
                                     ) : (
                                         <Button
                                             key={p}
                                             variant={p === currentPage ? 'default' : 'outline'}
                                             size="sm"
                                             onClick={() => setCurrentPage(p as number)}
-                                            className="w-9"
+                                            className={`w-9 ${p === currentPage ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-900' : 'border-gray-400 text-gray-700 hover:bg-gray-100'}`}
                                         >
                                             <span>{p}</span>
                                         </Button>
@@ -844,6 +873,7 @@ export function DeviceManagementPage() {
                                 size="sm"
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
+                                className="border-gray-400 text-gray-700 hover:bg-gray-100 disabled:opacity-40"
                             >
                                 <span>Próximo</span>
                             </Button>
