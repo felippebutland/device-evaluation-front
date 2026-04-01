@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Package, Plus, Edit2, Trash2, X, Save, DollarSign, AlertTriangle, Search } from 'lucide-react';
@@ -125,6 +126,7 @@ function normalizeSpecificPricingPolicyFromApi(
 }
 
 export function DeviceManagementPage() {
+    const { isAdmin } = useAuth();
     const [devices, setDevices] = useState<Device[]>([]);
     const [damageTypes, setDamageTypes] = useState<DamageType[]>([]);
     const [pricingPolicies, setPricingPolicies] = useState<PricingPolicy[]>([]);
@@ -135,9 +137,6 @@ export function DeviceManagementPage() {
     const [isConservationStateModalOpen, setIsConservationStateModalOpen] = useState(false);
     const [editingDevice, setEditingDevice] = useState<Device | null>(null);
     const [loading, setLoading] = useState(false);
-    const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalDevices, setTotalDevices] = useState(0);
     const [search, setSearch] = useState('');
 
     const emptyDevice: Device = {
@@ -179,26 +178,15 @@ export function DeviceManagementPage() {
         fetchDamageTypes();
         fetchPricingPolicies();
         fetchConservationStates();
+        fetchDevices();
     }, []);
 
-    useEffect(() => {
-        fetchDevices(currentPage, search);
-    }, [currentPage]);
-
-    useEffect(() => {
-        setCurrentPage(1);
-        fetchDevices(1, search);
-    }, [search]);
-
-    const fetchDevices = async (page = 1, searchTerm = '') => {
+    const fetchDevices = async (searchTerm = '') => {
         try {
-            const params = new URLSearchParams({ page: String(page), limit: '10' });
-            if (searchTerm.trim()) params.set('search', searchTerm.trim());
+            const params = new URLSearchParams({ page: '1', limit: '1000' });
             const response = await fetch(`${API_BASE_URL}/devices/public?${params}`);
             const data = await response.json();
             setDevices(data.data);
-            setTotalPages(data.totalPages ?? 1);
-            setTotalDevices(data.total ?? 0);
         } catch (error) {
             console.error('Erro ao carregar dispositivos:', error);
         }
@@ -410,7 +398,7 @@ export function DeviceManagementPage() {
             });
 
             if (response.ok) {
-                await fetchDevices(currentPage, search);
+                await fetchDevices();
                 handleCloseModal();
             }
         } catch (error) {
@@ -495,10 +483,7 @@ export function DeviceManagementPage() {
             await fetch(`${API_BASE_URL}/devices/${deviceId}`, {
                 method: 'DELETE',
             });
-            // Se era o último item da página, voltar para a anterior
-            const newPage = devices.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
-            setCurrentPage(newPage);
-            if (newPage === currentPage) await fetchDevices(currentPage, search);
+            await fetchDevices();
         } catch (error) {
             console.error('Erro ao excluir dispositivo:', error);
         }
@@ -676,7 +661,7 @@ export function DeviceManagementPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-            <div className="max-w-7xl mx-auto px-4 py-10">
+            <div className="max-w-7xl mx-auto px-4 pt-10 pb-4">
                 {/* Header */}
                 <div className="mb-8 flex justify-between items-center bg-white/80 backdrop-blur-sm border border-gray-100 rounded-xl p-6 shadow-sm">
                     <div>
@@ -687,36 +672,38 @@ export function DeviceManagementPage() {
                             Adicionar, editar e remover dispositivos do catálogo
                         </p>
                     </div>
-                    <div className="flex gap-3">
-                        <Button
-                            onClick={handleOpenConservationStateModal}
-                            variant="outline"
-                            className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
-                        >
-                            <Package className="h-4 w-4" />
-                            Novo Estado de Conservação
-                        </Button>
-                        <Button
-                            onClick={handleOpenDamageTypeModal}
-                            variant="outline"
-                            className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
-                        >
-                            <AlertTriangle className="h-4 w-4" />
-                            Novo Tipo de Dano
-                        </Button>
-                        <Button
-                            onClick={handleOpenPricingModal}
-                            variant="outline"
-                            className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
-                        >
-                            <DollarSign className="h-4 w-4" />
-                            Nova Política de Preço
-                        </Button>
-                        <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
-                            <Plus className="h-4 w-4" />
-                            Adicionar Dispositivo
-                        </Button>
-                    </div>
+                    {isAdmin && (
+                        <div className="flex gap-3">
+                            <Button
+                                onClick={handleOpenConservationStateModal}
+                                variant="outline"
+                                className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
+                            >
+                                <Package className="h-4 w-4" />
+                                Novo Estado de Conservação
+                            </Button>
+                            <Button
+                                onClick={handleOpenDamageTypeModal}
+                                variant="outline"
+                                className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
+                            >
+                                <AlertTriangle className="h-4 w-4" />
+                                Novo Tipo de Dano
+                            </Button>
+                            <Button
+                                onClick={handleOpenPricingModal}
+                                variant="outline"
+                                className="flex items-center gap-2 text-gray-800 hover:text-gray-900"
+                            >
+                                <DollarSign className="h-4 w-4" />
+                                Nova Política de Preço
+                            </Button>
+                            <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
+                                <Plus className="h-4 w-4" />
+                                Adicionar Dispositivo
+                            </Button>
+                        </div>
+                    )}
                 </div>
 
                 {/* Filtro por modelo */}
@@ -739,147 +726,161 @@ export function DeviceManagementPage() {
                     )}
                 </div>
 
-                {/* Lista de dispositivos */}
-                <div className="grid gap-4">
-                    {devices.length === 0 ? (
-                        <Card className="text-center p-12 bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-lg rounded-2xl">
-                            <CardContent>
-                                <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                    Nenhum dispositivo cadastrado
-                                </h3>
-                                <p className="text-gray-600 mb-6">
-                                    Comece adicionando seu primeiro dispositivo
-                                </p>
-                                <Button onClick={() => handleOpenModal()}>
-                                    Adicionar Dispositivo
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        devices.map(device => (
-                            <Card key={device._id} className="p-6 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition">
-                                <div className="flex justify-between items-start">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-3 mb-2">
-                                            <h3 className="text-xl font-semibold text-gray-900">
-                                                {device.name}
-                                            </h3>
-                                            <span
-                                                className={`px-2 py-1 rounded text-xs font-medium ${
-                                                    device.isActive
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : 'bg-red-100 text-red-800'
-                                                }`}
-                                            >
-                        {device.isActive ? 'Ativo' : 'Inativo'}
-                      </span>
-                                        </div>
-                                        <p className="text-gray-600 mb-4">
-                                            {device.brand} - {device.description}
-                                        </p>
+            </div>
 
-                                        <div className="grid grid-cols-3 gap-4 text-sm">
-                                            <div>
-                        <span className="font-medium text-gray-700">
-                          Variantes:
-                        </span>
-                                                <span className="ml-2 text-gray-600">
-                          {device.variants.length}
-                        </span>
-                                            </div>
-                                            <div>
-                        <span className="font-medium text-gray-700">
-                          Políticas:
-                        </span>
-                                                <span className="ml-2 text-gray-600">
-                          {device.specificPricingPolicies.length}
-                        </span>
-                                            </div>
-                                            <div>
-                        <span className="font-medium text-gray-700">
-                          Tipos de Dano:
-                        </span>
-                                                <span className="ml-2 text-gray-600">
-                          {device.applicableDamageTypes.length}
-                        </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handleOpenModal(device)}
-                                        >
-                                            <Edit2 className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => device._id && handleDelete(device._id)}
-                                            className="text-red-600 hover:text-red-700"
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))
-                    )}
-                </div>
-
-                {/* Paginação */}
-                {totalPages > 1 && (
-                    <div className="flex items-center justify-between mt-6 px-1">
-                        <p className="text-sm text-gray-600">
-                            Mostrando página <span className="font-medium">{currentPage}</span> de <span className="font-medium">{totalPages}</span> ({totalDevices} dispositivos)
-                        </p>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="border-gray-400 text-gray-700 hover:bg-gray-100 disabled:opacity-40"
-                            >
-                                <span>Anterior</span>
+            {/* Lista de dispositivos — planilha, largura total */}
+            {devices.length === 0 ? (
+                    <Card className="text-center p-12 bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-lg rounded-2xl">
+                        <CardContent>
+                            <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                Nenhum dispositivo cadastrado
+                            </h3>
+                            <p className="text-gray-600 mb-6">
+                                Comece adicionando seu primeiro dispositivo
+                            </p>
+                            <Button onClick={() => handleOpenModal()}>
+                                Adicionar Dispositivo
                             </Button>
-                            {Array.from({ length: totalPages }, (_, i) => i + 1)
-                                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 2)
-                                .reduce<(number | '...')[]>((acc, p, idx, arr) => {
-                                    if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('...');
-                                    acc.push(p);
-                                    return acc;
-                                }, [])
-                                .map((p, idx) =>
-                                    p === '...' ? (
-                                        <span key={`ellipsis-${idx}`} className="px-1 text-gray-500 font-medium">…</span>
-                                    ) : (
-                                        <Button
-                                            key={p}
-                                            variant={p === currentPage ? 'default' : 'outline'}
-                                            size="sm"
-                                            onClick={() => setCurrentPage(p as number)}
-                                            className={`w-9 ${p === currentPage ? 'bg-gray-900 text-white hover:bg-gray-800 border-gray-900' : 'border-gray-400 text-gray-700 hover:bg-gray-100'}`}
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm mx-2.5">
+                        <table className="text-xs border-collapse" style={{ borderSpacing: 0 }}>
+                            <thead>
+                                <tr className="bg-gray-100 text-left border-b-2 border-gray-300">
+                                    <th className="px-3 py-2.5 font-semibold text-gray-700 whitespace-nowrap border-r border-gray-200 sticky left-0 bg-gray-100 z-10">Dispositivo</th>
+                                    <th className="px-3 py-2.5 font-semibold text-gray-700 whitespace-nowrap border-r border-gray-200">Marca</th>
+                                    <th className="px-3 py-2.5 font-semibold text-gray-700 whitespace-nowrap border-r border-gray-200">Modelo</th>
+                                    <th className="px-3 py-2.5 font-semibold text-gray-700 whitespace-nowrap border-r border-gray-200">Memória</th>
+                                    <th className="px-3 py-2.5 font-semibold text-gray-700 whitespace-nowrap border-r border-gray-200">Preço</th>
+                                    <th className="px-3 py-2.5 font-semibold text-gray-700 whitespace-nowrap border-r border-gray-200">Status</th>
+                                    {[...damageTypes].sort((a, b) => (a.operation === 'add' ? 0 : 1) - (b.operation === 'add' ? 0 : 1)).map(dt => (
+                                        <th key={dt.id} className={`px-3 py-2.5 font-semibold whitespace-nowrap border-r border-gray-200 text-center ${dt.operation === 'add' ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>
+                                            {dt.name}
+                                        </th>
+                                    ))}
+                                    {isAdmin && <th className="px-3 py-2.5 font-semibold text-gray-700 whitespace-nowrap">Ações</th>}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[...devices].filter(device => {
+                                    if (!search.trim()) return true;
+                                    const q = search.trim().toLowerCase();
+                                    if (device.name.toLowerCase().includes(q)) return true;
+                                    return device.variants.some(v =>
+                                        v.model?.toLowerCase().includes(q) || v.memory?.toLowerCase().includes(q)
+                                    );
+                                }).sort((a, b) => {
+                                    const num = (name: string) => { const m = name.match(/(\d+)/); return m ? parseInt(m[1]) : -1; };
+                                    return num(b.name) - num(a.name);
+                                }).map((device, deviceIdx) => {
+                                    const rows = device.variants.length > 0 ? device.variants : [null];
+                                    return rows.map((variant, varIdx) => (
+                                        <tr
+                                            key={`${device._id}-${varIdx}`}
+                                            className={`border-b border-gray-100 hover:bg-yellow-50 transition-colors ${deviceIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}
                                         >
-                                            <span>{p}</span>
-                                        </Button>
-                                    )
-                                )}
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="border-gray-400 text-gray-700 hover:bg-gray-100 disabled:opacity-40"
-                            >
-                                <span>Próximo</span>
-                            </Button>
-                        </div>
+                                            {/* Dispositivo — exibe apenas na primeira linha do grupo */}
+                                            {varIdx === 0 && (
+                                                <td
+                                                    rowSpan={rows.length}
+                                                    className="px-3 py-2 font-semibold text-gray-900 border-r border-gray-200 align-top sticky left-0 z-10 whitespace-nowrap"
+                                                    style={{ backgroundColor: deviceIdx % 2 === 0 ? '#fff' : '#f9fafb' }}
+                                                >
+                                                    {device.name}
+                                                </td>
+                                            )}
+                                            {varIdx === 0 && (
+                                                <td
+                                                    rowSpan={rows.length}
+                                                    className="px-3 py-2 text-gray-600 border-r border-gray-200 align-top whitespace-nowrap"
+                                                >
+                                                    {device.brand}
+                                                </td>
+                                            )}
+
+                                            {/* Modelo */}
+                                            <td className="px-3 py-2 text-gray-700 border-r border-gray-200 whitespace-nowrap">
+                                                {variant?.model || '—'}
+                                            </td>
+                                            {/* Memória */}
+                                            <td className="px-3 py-2 text-gray-700 border-r border-gray-200 whitespace-nowrap">
+                                                {variant?.memory || '—'}
+                                            </td>
+                                            {/* Preço */}
+                                            <td className="px-3 py-2 text-gray-700 border-r border-gray-200 whitespace-nowrap font-medium">
+                                                {variant?.price != null
+                                                    ? `R$ ${Number(variant.price).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+                                                    : '—'}
+                                            </td>
+                                            {/* Status da variante */}
+                                            <td className="px-3 py-2 border-r border-gray-200 whitespace-nowrap">
+                                                {variant ? (
+                                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${variant.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                        {variant.isActive ? 'Ativo' : 'Inativo'}
+                                                    </span>
+                                                ) : (
+                                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${device.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                        {device.isActive ? 'Ativo' : 'Inativo'}
+                                                    </span>
+                                                )}
+                                            </td>
+
+                                            {/* Colunas de tipos de dano */}
+                                            {[...damageTypes].sort((a, b) => (a.operation === 'add' ? 0 : 1) - (b.operation === 'add' ? 0 : 1)).map(dt => {
+                                                const applicable = (device.applicableDamageTypes as any[]).find(adt => {
+                                                    const adtId = adt.damageType?._id ?? adt.damageType?.id ?? adt.id;
+                                                    return String(adtId) === String(dt.id);
+                                                });
+                                                const discountValue: number | null = applicable
+                                                    ? Number(applicable.defaultDiscountPercentage ?? 0)
+                                                    : null;
+                                                const op: 'add' | 'subtract' = applicable?.operation === 'add' ? 'add' : 'subtract';
+                                                return (
+                                                    <td key={dt.id} className="px-3 py-2 border-r border-gray-200 text-center whitespace-nowrap bg-orange-50/30">
+                                                        {applicable ? (
+                                                            applicable.blocksSubmission ? (
+                                                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-600 text-white font-bold text-xs">✕</span>
+                                                            ) : (
+                                                                <span className={`font-semibold ${op === 'subtract' ? 'text-red-700' : 'text-green-700'}`}>
+                                                                    {op === 'subtract' ? '−' : '+'}R$ {(discountValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                                                </span>
+                                                            )
+                                                        ) : (
+                                                            <span className="text-gray-300">—</span>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+
+                                            {/* Ações — exibe apenas na primeira linha do grupo e apenas para admins */}
+                                            {isAdmin && varIdx === 0 && (
+                                                <td rowSpan={rows.length} className="px-3 py-2 align-top whitespace-nowrap">
+                                                    <div className="flex gap-1">
+                                                        <Button variant="outline" size="sm" onClick={() => handleOpenModal(device)} className="border-gray-500 text-gray-800 hover:bg-gray-200">
+                                                            <Edit2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => device._id && handleDelete(device._id)}
+                                                            className="text-red-600 hover:text-red-700"
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </td>
+                                            )}
+                                        </tr>
+                                    ));
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 )}
+
+            <div className="pb-10" />
 
                 {/* Modal de Estado de Conservação */}
                 {isConservationStateModalOpen && (
@@ -1580,7 +1581,6 @@ export function DeviceManagementPage() {
                         </Card>
                     </div>
                 )}
-            </div>
         </div>
     );
 }
