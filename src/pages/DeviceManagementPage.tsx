@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Package, Plus, Edit2, Trash2, X, Save, DollarSign, AlertTriangle, Search } from 'lucide-react';
+import { Package, Plus, Edit2, Trash2, X, Save, DollarSign, AlertTriangle, Search, LogOut, UserPlus } from 'lucide-react';
 
 interface DamageType {
     id: string;
@@ -126,7 +127,8 @@ function normalizeSpecificPricingPolicyFromApi(
 }
 
 export function DeviceManagementPage() {
-    const { isAdmin } = useAuth();
+    const { isAdmin, logout, user } = useAuth();
+    const navigate = useNavigate();
     const [devices, setDevices] = useState<Device[]>([]);
     const [damageTypes, setDamageTypes] = useState<DamageType[]>([]);
     const [pricingPolicies, setPricingPolicies] = useState<PricingPolicy[]>([]);
@@ -135,9 +137,18 @@ export function DeviceManagementPage() {
     const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
     const [isDamageTypeModalOpen, setIsDamageTypeModalOpen] = useState(false);
     const [isConservationStateModalOpen, setIsConservationStateModalOpen] = useState(false);
+    const [isCreateUserModalOpen, setIsCreateUserModalOpen] = useState(false);
+    const [createUserForm, setCreateUserForm] = useState({ name: '', email: '', password: '', role: 'user' });
+    const [createUserLoading, setCreateUserLoading] = useState(false);
+    const [createUserError, setCreateUserError] = useState('');
     const [editingDevice, setEditingDevice] = useState<Device | null>(null);
     const [loading, setLoading] = useState(false);
     const [search, setSearch] = useState('');
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     const emptyDevice: Device = {
         name: '',
@@ -286,6 +297,29 @@ export function DeviceManagementPage() {
             specificPricingPolicies,
             applicableConservationStates,
         };
+    };
+
+    const handleSubmitCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCreateUserLoading(true);
+        setCreateUserError('');
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(createUserForm),
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.message || 'Erro ao criar usuário');
+            }
+            setIsCreateUserModalOpen(false);
+            setCreateUserForm({ name: '', email: '', password: '', role: 'user' });
+        } catch (err: any) {
+            setCreateUserError(err.message || 'Erro ao criar usuário');
+        } finally {
+            setCreateUserLoading(false);
+        }
     };
 
     const handleOpenModal = (device?: Device) => {
@@ -672,7 +706,8 @@ export function DeviceManagementPage() {
                             Adicionar, editar e remover dispositivos do catálogo
                         </p>
                     </div>
-                    {isAdmin && (
+                    <div className="flex gap-3 items-center">
+                        {isAdmin && (
                         <div className="flex gap-3">
                             <Button
                                 onClick={handleOpenConservationStateModal}
@@ -703,7 +738,26 @@ export function DeviceManagementPage() {
                                 Adicionar Dispositivo
                             </Button>
                         </div>
-                    )}
+                        )}
+                        {isAdmin && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsCreateUserModalOpen(true)}
+                                className="flex items-center gap-2 text-blue-700 border-blue-300 hover:bg-blue-50"
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                Criar Usuário
+                            </Button>
+                        )}
+                        <Button
+                            variant="outline"
+                            onClick={handleLogout}
+                            className="flex items-center gap-2 text-red-600 border-red-300 hover:bg-red-50"
+                        >
+                            <LogOut className="h-4 w-4" />
+                            Sair
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Filtro por modelo */}
@@ -881,6 +935,76 @@ export function DeviceManagementPage() {
                 )}
 
             <div className="pb-10" />
+
+                {/* Modal Criar Usuário */}
+                {isCreateUserModalOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onClick={() => setIsCreateUserModalOpen(false)}>
+                        <Card className="w-full max-w-md rounded-xl shadow-2xl" onClick={e => e.stopPropagation()}>
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-2xl font-bold text-gray-900">Criar Usuário</h2>
+                                    <button onClick={() => setIsCreateUserModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                                        <X className="h-6 w-6" />
+                                    </button>
+                                </div>
+                                <form onSubmit={handleSubmitCreateUser} className="space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={createUserForm.name}
+                                            onChange={e => setCreateUserForm(f => ({ ...f, name: e.target.value }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={createUserForm.email}
+                                            onChange={e => setCreateUserForm(f => ({ ...f, email: e.target.value }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            value={createUserForm.password}
+                                            onChange={e => setCreateUserForm(f => ({ ...f, password: e.target.value }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Perfil</label>
+                                        <select
+                                            value={createUserForm.role}
+                                            onChange={e => setCreateUserForm(f => ({ ...f, role: e.target.value }))}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        >
+                                            <option value="user">Usuário</option>
+                                            <option value="admin">Admin</option>
+                                        </select>
+                                    </div>
+                                    {createUserError && (
+                                        <p className="text-sm text-red-600">{createUserError}</p>
+                                    )}
+                                    <div className="flex justify-end gap-3 pt-2">
+                                        <Button type="button" variant="outline" onClick={() => setIsCreateUserModalOpen(false)}>
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                        <Button type="submit" disabled={createUserLoading}>
+                                            <Save className="h-4 w-4" />
+                                        </Button>
+                                    </div>
+                                </form>
+                            </div>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Modal de Estado de Conservação */}
                 {isConservationStateModalOpen && (

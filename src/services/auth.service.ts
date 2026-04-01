@@ -1,5 +1,5 @@
 import { apiService } from './api';
-import { STORAGE_KEYS } from '@/utils/constants';
+import { STORAGE_KEYS, SESSION_DURATION_MS } from '@/utils/constants';
 import type {
   User,
   AuthResponse,
@@ -8,30 +8,39 @@ import type {
 } from '@/types';
 
 export class AuthService {
+  private persistSession(): void {
+    localStorage.setItem(
+      STORAGE_KEYS.SESSION_EXPIRY,
+      String(Date.now() + SESSION_DURATION_MS)
+    );
+  }
+
+  isSessionValid(): boolean {
+    const expiry = localStorage.getItem(STORAGE_KEYS.SESSION_EXPIRY);
+    if (!expiry) return false;
+    return Date.now() < Number(expiry);
+  }
+
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-      console.log('AuthService.login called with credentials:', credentials);
     const response = await apiService.post<AuthResponse>('/auth/login', credentials);
-    console.log('AuthService.login response:', response);
-    // Store token and user data
     localStorage.setItem(STORAGE_KEYS.TOKEN, response.token);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
-
+    this.persistSession();
     return response;
   }
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
     const response = await apiService.post<AuthResponse>('/auth/register', userData);
-
-    // Store token and user data
     localStorage.setItem(STORAGE_KEYS.TOKEN, response.token);
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(response.user));
-
+    this.persistSession();
     return response;
   }
 
   logout(): void {
     localStorage.removeItem(STORAGE_KEYS.TOKEN);
     localStorage.removeItem(STORAGE_KEYS.USER);
+    localStorage.removeItem(STORAGE_KEYS.SESSION_EXPIRY);
   }
 
   getCurrentUser(): User | null {

@@ -25,23 +25,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(true);
       try {
         const token = authService.getToken();
-        if (!token) {
-          // No token -> ensure clean state
+
+        if (!token || !authService.isSessionValid()) {
           authService.logout();
           setUser(null);
           return;
         }
 
-        // If we have a token, validate it with the backend and refresh user
-        try {
-          const refreshed = await authService.refreshUser();
-          setUser(refreshed);
-        } catch (err) {
-          // Token invalid/expired -> clear everything
-          console.warn('Token inválido/expirado. Limpando sessão.');
-          authService.logout();
-          setUser(null);
+        // Session still valid — restore user from localStorage immediately
+        const storedUser = authService.getCurrentUser();
+        if (storedUser) {
+          setUser(storedUser);
         }
+
+        // Refresh silently in background; don't logout on failure
+        authService.refreshUser()
+          .then(refreshed => setUser(refreshed))
+          .catch(() => {
+            // ignore — user keeps working with stored data until session expires
+          });
       } catch (error) {
         console.error('Error initializing auth:', error);
         authService.logout();

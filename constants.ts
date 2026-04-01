@@ -3,8 +3,11 @@ export const API_BASE_URL = 'https://api-device.usestarshield.com/api/v1'
 export const STORAGE_KEYS = {
   TOKEN: 'devicehub_token',
   USER: 'devicehub_user',
-  THEME: 'devicehub_theme'
+  THEME: 'devicehub_theme',
+  SESSION_EXPIRY: 'devicehub_session_expiry'
 } as const;
+
+export const SESSION_DURATION_MS = 6 * 60 * 60 * 1000; // 6 horas
 
 export const DEVICE_CONDITIONS = [
   { value: 'excellent', label: 'Excelente', color: 'bg-green-100 text-green-800' },
